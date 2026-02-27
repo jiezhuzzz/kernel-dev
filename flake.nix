@@ -20,6 +20,11 @@
       url = "github:nix-community/fenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    klee = {
+      url = "github:uchi-zero/klee/dev/v3.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -29,12 +34,16 @@
       rust-overlay,
       fenix,
       flake-utils,
+      klee,
       ...
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
       let
-        pkgs = nixpkgs.legacyPackages."${system}";
+        pkgs = import nixpkgs {
+          inherit system;
+          overlays = [ klee.overlays.default ];
+        };
 
         # A set of scripts to simplify kernel development.
         kernelDevTools = pkgs.callPackage ./tools.nix {
@@ -53,6 +62,7 @@
             flex
             gmp
             gnumake
+            gllvm
             kmod
             libmpc
             mpfr
@@ -119,13 +129,16 @@
           };
 
         mkClangShell =
-          { clangVersion, rustcVersion }:
+          { rustcVersion }:
           let
-            llvmPackages = pkgs."llvmPackages_${clangVersion}";
+            llvmPackages = pkgs.llvmPackages_klee;
           in
           pkgs.mkShell {
             packages =
-              (with llvmPackages; [
+              [
+                pkgs.klee
+              ]
+              ++ (with llvmPackages; [
                 bintools
                 clang
                 llvm
@@ -155,19 +168,16 @@
           default = self.devShells."${system}".linux_6_12;
 
           linux_6_6 = mkClangShell {
-            clangVersion = "19";
             rustcVersion = "1_78_0";
           };
           linux_6_6_gcc = mkGccShell { gccVersion = "14"; };
 
           linux_6_11 = mkClangShell {
-            clangVersion = "19";
             rustcVersion = "1_78_0";
           };
           linux_6_11_gcc = mkGccShell { gccVersion = "14"; };
 
           linux_6_12 = mkClangShell {
-            clangVersion = "19";
             rustcVersion = "1_82_0";
           };
           linux_6_12_gcc = mkGccShell { gccVersion = "14"; };
