@@ -42,7 +42,10 @@
       let
         pkgs = import nixpkgs {
           inherit system;
-          overlays = [ klee.overlays.default ];
+          overlays = [
+            klee.overlays.default
+            (import ./overlays/llvm-kernel.nix)
+          ];
         };
 
         # A set of scripts to simplify kernel development.
